@@ -1,0 +1,8 @@
+Operting voltages:
+  Max:  16V
+  Min:  4.5V
+
+Frequency:
+  Is determined by rA and rB and C
+  Max:
+  Min: 
