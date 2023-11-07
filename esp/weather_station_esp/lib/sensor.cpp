@@ -24,15 +24,21 @@ void setup(){
 
 }
 
-void loop(){
+void read_wind(){
     if(millis() -timeold2 >= 1000){
         float rps = (1000.0 *revolutions) / (millis() -timeold);
         Serial.print("RPS: ");
         Serial.println(rps);
         timeold2 = millis();
+        Serial.println(revolutions);
     }
     if(millis() - timeold >= 10000){
         timeold = millis();
         revolutions = 0;
     }
+
+}
+
+void loop(){
+    read_wind();
 }
