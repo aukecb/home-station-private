@@ -28,15 +28,7 @@ DHT dht(DHT_PIN, DHT11);
 WiFiClient wifi_client;
 PubSubClient client(wifi_client);
 
-long last_msg = 0;
-char msg[50];
-int value = 0;
-
 volatile int revolutions;
-float rpmilli;
-float speed;
-unsigned long timeold = 0;
-unsigned long timeold2 = 0;
 
 void ICACHE_RAM_ATTR increase_revolutions();
 void callback(char* topic, byte* message, unsigned int length);
@@ -84,26 +76,32 @@ float read_light(){
 
 
 float rps;
+float ms;
+unsigned long previousMillis;
+unsigned long prevMillis2;
+float total;
 float read_wind(){
-    if(millis() -timeold2 >= 1000){
-        rps = (1000.0 *revolutions) / (millis() -timeold);
-        Serial.print("RPS: ");
-        Serial.println(rps);
-        timeold2 = millis();
-        Serial.println(revolutions);
-    }
-    if(millis() - timeold >= 10000){
-        timeold = millis();
-        revolutions = 0;
-    }
+  if(millis() - previousMillis >= 1000){
+    float r = static_cast<float>(revolutions) / ((millis() - previousMillis) / 1000.0);
+    total += r;
+    revolutions = 0;
+    previousMillis = millis();
+  }
+  if(millis() - prevMillis2 >= 10000){
+    rps = total / 10;
+    total = 0;
+    prevMillis2 = millis();
+  }
   
-  float ms = 0.77*rps + 1.79;
+  ms = 0.958*rps - 0.201;
+  if(ms < 0){
+    ms = 0;
+  }
   return ms;
 }
 
 void increase_revolutions(){
   revolutions++;
-  Serial.print(revolutions);
 }
 
 void setup() {
@@ -124,7 +122,7 @@ void loop() {
     float temp = dht.readTemperature();
     float humid = dht.readHumidity();
     float light = read_light();
-    send_mqtt(temp, humid, rps, light);
+    send_mqtt(temp, humid, ms, light);
     counter = 0;
   }
   client.loop();
@@ -133,10 +131,10 @@ void loop() {
   counter++;
 }
 
-void send_mqtt(float temp, float humid, float rps, float light){
+void send_mqtt(float temp, float humid, float wind, float light){
   if(WiFi.status() == WL_CONNECTED){
     if(client.connected()){
-      String data = "{\"user\":\"auke\", \"weather_station\": 2, \"data\": {\"temp(°C)\":"+ (String)temp+",\"humid(%)\":"+ (String)humid+",\"wind(m/s)\":"+(String)rps + ",\"light(lux)\":" + (String)light +"}}";
+      String data = "{\"user\":\"auke\", \"weather_station\": 2, \"data\": {\"temp(°C)\":"+ (String)temp+",\"humid(%)\":"+ (String)humid+",\"wind(m/s)\":"+(String)wind + ",\"light(lux)\":" + (String)light +"}}";
       if(!isnan(temp) && !isnan(humid)){
         Serial.print("Sent: ");
         Serial.println(data);
